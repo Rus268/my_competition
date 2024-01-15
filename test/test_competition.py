@@ -1,4 +1,4 @@
-import pytest
+from lib.competition import Competition
 
 def main():
     """ This is the main function of the program"""

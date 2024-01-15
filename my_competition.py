@@ -12,11 +12,12 @@ Outline any problem or requirement that we have not implemented in the code her.
 """
 
 # Import required librarys
-from lib import class.Team as Team
+from lib.competition import Competition
 
 def main():
     """ This is the main function of the program"""
-    # Call the required functions
+    competition = Competition()
+    chal = competition.read_command_line
     pass
 
 
