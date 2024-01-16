@@ -17,7 +17,7 @@ from lib.competition import Competition
 def main():
     """ This is the main function of the program"""
     competition = Competition()
-    chal = competition.read_command_line
+    challenge = competition.read_command_line()
     pass
 
 

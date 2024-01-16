@@ -1,3 +1,7 @@
+"""
+Student class and its subclasses.
+"""
+
 class Student():
     """
     A class representing a student.
@@ -85,8 +89,9 @@ class Postgraduate(Student):
         # Modify the type attribute of the object
         self.type = 'P'
 
-def main():
-    pass
-
 if __name__ == "__main__":
-    main()
+    # Test code
+    student = Student("S1", "John")
+    undergrad = Student.new_student("U", "S2", "Mary")
+    postgrad = Student.new_student("P", "S3", "Peter")
+    print(student, undergrad, postgrad, sep="\n")
