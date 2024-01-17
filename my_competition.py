@@ -5,7 +5,7 @@ Student ID: s3676330
 
 Highest level attempted: Pass
 
-Date: 30/10/2020
+Date: 16/1/2024
 
 Short description:
 Outline any problem or requirement that we have not implemented in the code her.
@@ -17,9 +17,7 @@ from lib.competition import Competition
 def main():
     """ This is the main function of the program"""
     competition = Competition()
-    challenge = competition.read_command_line()
-    pass
-
+    competition.read_all(*competition.read_command_line())
 
 if __name__ == "__main__":
     main()

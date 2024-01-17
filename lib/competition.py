@@ -38,14 +38,13 @@ class Competition():
     
     @staticmethod
     def resuls_table_process(value):
-        """Process the value in the result table to ensure it is in the correct format."""
+        """Process the value in the result table to remove the leading and trailing whitespace 
+        and replace the empty string with "Results" and replace the value of -1 with an empty string"""
         value = value.strip() # Remove the leading and trailing whitespace
         if value == "":
             return "Results"
         if value in '-1':
             return ''
-        if value.isdigit():
-            return float(value)
         if value in ["444", 'TBA', 'tba']:
             return "--"
         return value
@@ -78,23 +77,28 @@ class Competition():
         table = self.results[0] # Get the latest result
         # Replace None values with an empty string
         table = [[col if col is not None else '' for col in row] for row in table]
-        widths = [max(map(len, str(col))) for col in zip(*table)]
-        row_template = '|'.join(f"{{:{width}}}" for width in widths)
+        widths = [(max(map(len, str(col))) + 8) for col in zip(*table)] # Get the max length of each column and add 3 to it
+        widths[0] += 5 # Add 5 to the first column
+        row_template = '|'+'|'.join(f"{{:^{width}}}" for width in widths) +'|' # Create the row template
+        separator = '+'+'+'.join('-'* w for w in widths)+'+' # Create the separator
         no_student = len(table) - 1
         no_challenge = len(table[0]) - 1
         fastest_student, fastest_time = self.show_fastest_student()
         # Print header
+        print()
         print("COMPETITION DASHBOARD")
-        print('+'.join('-'*(w + 2) for w in widths))
+        print(separator)
         print(row_template.format(*table[0], *widths))
-        print('+'.join('-'*(w + 2) for w in widths))
+        print(separator)
         # Print table content
         for row in table[1:]:
             print(row_template.format(*row, *widths))
-        print('+'.join('-'*(w + 2) for w in widths))
+        print(separator)
+        # Print footer
         print(f'There are {no_student} students and {no_challenge} challenges')
         print(f'The top student is {fastest_student} with an average time of {fastest_time} minutes')
-    
+        print()
+   
     def read_students(self, file):
         """
         Read the students from the given file and save it to the students attribute.
@@ -131,7 +135,7 @@ class Competition():
     
     def show_fastest_student(self) -> tuple:
         """
-        Display the fastest student in the competition with their average time.
+        Display the fastest student in the latest result record with their average time.
 
         Returns:
         - tuple: A tuple containing the fastest student object and their average time.
@@ -141,7 +145,7 @@ class Competition():
         # Since the latest result is alway the top of the list, we can access index 0 to get the latest result
         current_result = self.results[0]
         # Loop through the result to find the fastest student
-        for i in range(1, len(current_result)): # Skip the first element because it is the header
+        for i in range(1, len(current_result)): # Skip the first row because it is the header
             student_result = current_result[i]
             # Loop through the student result to find the fastest student
             average_time = 0
@@ -255,12 +259,9 @@ class Competition():
             sys.exit(0)
 
 if __name__ == "__main__":
-    # test code
+    # Test code at pass level
     competition = Competition()
     files = competition.read_command_line()
     competition.read_results(files[0])
-    competition.read_students(files[1])
-    print(competition.results[0])
-    print(competition.show_fastest_student())
     competition.display_results()
     
