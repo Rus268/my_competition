@@ -2,7 +2,8 @@
 Student class and its subclasses.
 """
 
-from lib.result import Result
+from .result import Result
+from .challenge import Challenge
 
 class Student():
     """
@@ -18,7 +19,6 @@ class Student():
         self.__name = name
         self.__type = None
         self.__challenges = []
-        self.__results = Result(0,0,0)
 
     @property
     def id(self):
@@ -63,27 +63,21 @@ class Student():
         """
         return self.__challenges
     
-    @challenges.setter
-    def challenges(self, new_challenge):
-        self.__challenges = new_challenge
+    def add_challenges(self, new_challenge: Challenge):
+        """Add a new challenge to the student"""
+        self.__challenges.append(new_challenge)
     
-    def meets_requirements(self, challenge):
-        """
-        Check if the student meets the requirements of a challenge.
+    def remove_challenges(self, challenge):
+        """Remove a challenge from the student"""
+        self.__challenges.remove(challenge)
+    
+    def meets_requirements(self):
+        """Check if the student meets the requirements for the competition"""
+        pass
 
-        Input:
-            challenge (Challenge): The challenge to check.
-
-        Returns:
-            bool: True if the student meets the requirements, False otherwise.
-        """
-        if challenge.type == 'M':
-            return True
-        elif challenge.type == 'S':
-            return challenge in self.__challenges
 
     def __str__(self):
-        return f"{self.id}, {self.type}, {self.name}" # return a string representation of the object
+        return f"{self.id} ({self.name})" # return a string representation of the object
 
 class Undergraduate(Student):
     """
@@ -93,6 +87,20 @@ class Undergraduate(Student):
         super().__init__(student_id, name)
         # Modify the type attribute of the object
         self.type = 'U'
+    
+    def meets_requirements(self):
+        """Check if the student meets the requirements for the competition as a Undergraduate student"""
+        special_challenge_count = 0
+        mandatory_challenge_count = 0
+        total_challenge_count = len(self.challenges)
+        for challenge in self.challenges:
+            if challenge.type == 'M':
+                mandatory_challenge_count += 1
+            elif challenge.type == 'S':
+                special_challenge_count += 1
+        if special_challenge_count >= 1 and (total_challenge_count - special_challenge_count) == mandatory_challenge_count:
+            return True
+        return False
 
 class Postgraduate(Student):
     """
@@ -103,12 +111,27 @@ class Postgraduate(Student):
         # Modify the type attribute of the object
         self.type = 'P'
 
+    def meets_requirements(self):
+        """Check if the student meets the requirements for the competition as a Pndergraduate student"""
+        special_challenge_count = 0
+        mandatory_challenge_count = 0
+        total_challenge_count = len(self.challenges)
+        for challenge in self.challenges:
+            if challenge.type == 'M':
+                mandatory_challenge_count += 1
+            elif challenge.type == 'S':
+                special_challenge_count += 1
+        if special_challenge_count >= 2 and (total_challenge_count - special_challenge_count) == mandatory_challenge_count:
+            return True
+        return False
+
+
 class StudentFactory():
     """
     A factory class for creating new student objects.
     """
     @staticmethod
-    def new_student(student_id, student_type, name) -> Student:
+    def new_student(student_id, name, student_type) -> Student:
         """
         Create a new student object based on the given student type.
 
@@ -147,6 +170,15 @@ class StudentManager():
         self.__students = new_student
     
     def add_student(self, new_student):
+        """
+        Adds a new student to the list of students.
+
+        Parameters:
+        - new_student: The student object to be added.
+
+        Returns:
+        None
+        """
         self.__students.append(new_student)
     
     def remove_student(self, student_id):
@@ -163,6 +195,15 @@ class StudentManager():
         return False
     
     def get_student(self, student_id) -> Student:
+        """
+        Get a student from the students attribute.
+
+        Input:
+            student_id (str): The ID of the student to get.
+        
+        Returns:
+            Student: The student object with the given ID. None if not found.
+        """
         for student in self.__students:
             if student.id == student_id:
                 return student
@@ -178,14 +219,13 @@ class StudentManager():
         """
         if file_name is None:
             raise ValueError(f"Missing student file name {file_name}")
-        with open(file, "r", encoding="utf-8") as file:
+        with open(file_name, "r", encoding="utf-8") as file:
             # read the rest of the file
             for line in file:
                 elements = [item.strip() for item in line.strip().split(",")]
                 if len(elements) == 3:
-                    print(elements)
-                    student = Student.new_student(elements[2], elements[0], elements[1])
-                    self.__students.append(student)
+                    student = StudentFactory.new_student(elements[0], elements[1], elements[2])
+                    self.add_student(student)
                 else:
                     raise ValueError("Invalid student record")
 

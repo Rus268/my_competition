@@ -194,7 +194,6 @@ class ChallengeManager():
             list: A list of challenges id
         """
         return [challenge.id for challenge in self.__challenges]
-            
     
     def add_challenge(self, challenge_id, challenge_type, name, weight = 1.0) -> None:
         """ Adds a challenge to the list of challenges."""
