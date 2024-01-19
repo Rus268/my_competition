@@ -2,7 +2,6 @@
 Student class and its subclasses.
 """
 
-from .result import Result
 from .challenge import Challenge
 
 class Student():
@@ -18,7 +17,6 @@ class Student():
         self.__id = student_id
         self.__name = name
         self.__type = None
-        self.__challenges = []
 
     @property
     def id(self):
@@ -54,27 +52,42 @@ class Student():
         return self.__type
     @type.setter
     def type(self, new_type):
+        if new_type not in ['U', 'P']:
+            raise ValueError("Invalid student type")
         self.__type = new_type
-    
-    @property
-    def challenges(self):
-        """
-        Returns the challenges of the student.
-        """
-        return self.__challenges
-    
-    def add_challenges(self, new_challenge: Challenge):
-        """Add a new challenge to the student"""
-        self.__challenges.append(new_challenge)
-    
-    def remove_challenges(self, challenge):
-        """Remove a challenge from the student"""
-        self.__challenges.remove(challenge)
-    
-    def meets_requirements(self):
-        """Check if the student meets the requirements for the competition"""
-        pass
 
+
+    def meets_requirements(self, result_dict: dict) -> bool:
+        """Use the participation with type dictionary from competition class to check if the student meets the requirements for the competition as an undergraduate student
+        
+        Input:
+        
+        - result_dict (dict): {student_id: (participation_type, participation_status)}
+        
+        Returns:
+        - bool (True or False): True if the student meets the requirements, False if not
+        """
+        if self.type == 'U':
+            min_special_challenge = 1
+        elif self.type == 'P':
+            min_special_challenge = 2
+        else:
+            raise ValueError("Invalid student type")
+        meet_min_special = False
+        complete_all_mandatory = True  # Assume all mandatory challenges are completed until proven otherwise
+        special_challenge_count = 0
+        for participation_status in result_dict.values():
+            if participation_status[0] == 'M':
+                if participation_status[1] != 1:  # If a mandatory challenge is not completed, set complete_all_mandatory to False
+                    complete_all_mandatory = False
+                    break
+            if participation_status[0] == 'S' and participation_status[1] == 1:  # Only count completed special challenges
+                special_challenge_count += 1
+        if special_challenge_count >= min_special_challenge:
+            meet_min_special = True
+        if meet_min_special and complete_all_mandatory:
+            return True
+        return False
 
     def __str__(self):
         return f"{self.id} ({self.name})" # return a string representation of the object
@@ -87,20 +100,7 @@ class Undergraduate(Student):
         super().__init__(student_id, name)
         # Modify the type attribute of the object
         self.type = 'U'
-    
-    def meets_requirements(self):
-        """Check if the student meets the requirements for the competition as a Undergraduate student"""
-        special_challenge_count = 0
-        mandatory_challenge_count = 0
-        total_challenge_count = len(self.challenges)
-        for challenge in self.challenges:
-            if challenge.type == 'M':
-                mandatory_challenge_count += 1
-            elif challenge.type == 'S':
-                special_challenge_count += 1
-        if special_challenge_count >= 1 and (total_challenge_count - special_challenge_count) == mandatory_challenge_count:
-            return True
-        return False
+
 
 class Postgraduate(Student):
     """
@@ -110,21 +110,6 @@ class Postgraduate(Student):
         super().__init__(student_id, name)
         # Modify the type attribute of the object
         self.type = 'P'
-
-    def meets_requirements(self):
-        """Check if the student meets the requirements for the competition as a Pndergraduate student"""
-        special_challenge_count = 0
-        mandatory_challenge_count = 0
-        total_challenge_count = len(self.challenges)
-        for challenge in self.challenges:
-            if challenge.type == 'M':
-                mandatory_challenge_count += 1
-            elif challenge.type == 'S':
-                special_challenge_count += 1
-        if special_challenge_count >= 2 and (total_challenge_count - special_challenge_count) == mandatory_challenge_count:
-            return True
-        return False
-
 
 class StudentFactory():
     """
@@ -144,12 +129,14 @@ class StudentFactory():
             Student: A new student object of the appropriate type. Can be either Undergraduate or Postgraduate.
 
         """
-        if student_type == 'U' and student_id.startswith('S'):
+        if not student_id.startswith('S'):
+            raise ValueError("Invalid student ID. Must start with 'S'")
+        if student_type == 'U':
             return Undergraduate(student_id, name)
-        elif student_type == 'P' and student_id.startswith('S'):
+        elif student_type == 'P':
             return Postgraduate(student_id, name)
         else:
-            raise ValueError("Invalid student type or ID")
+            raise ValueError("Invalid student type")
 
 class StudentManager():
     """
@@ -222,12 +209,15 @@ class StudentManager():
         with open(file_name, "r", encoding="utf-8") as file:
             # read the rest of the file
             for line in file:
+                if ',' not in line:
+                    raise ValueError("Student record must be separated by comma")
                 elements = [item.strip() for item in line.strip().split(",")]
                 if len(elements) == 3:
                     student = StudentFactory.new_student(elements[0], elements[1], elements[2])
                     self.add_student(student)
                 else:
-                    raise ValueError("Invalid student record")
+                    raise ValueError("Unexpected number of elements in student record or record is not separated by comma")
+                
 
 if __name__ == "__main__":
     # Test code

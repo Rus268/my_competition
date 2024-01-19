@@ -119,19 +119,24 @@ class Competition():
         - sys.argv[3]: The path to the file to read the students from.
         
         """
-        if len(sys.argv) == 1:
-            sys.exit('No results are available for the competition')
-        elif len(sys.argv) == 2:
-            self.read_results(sys.argv[1])
-        elif len(sys.argv) == 3:
-            self.read_results(sys.argv[1])
-            self.read_challenges(sys.argv[2])
-        elif len(sys.argv) == 4:
-            self.read_results(sys.argv[1])
-            self.read_challenges(sys.argv[2])
-            self.read_students(sys.argv[3])
-        else:
-            sys.exit('Invalid number of files')
+        try:
+            if len(sys.argv) == 1:
+                sys.exit('No results are available for the competition')
+            elif len(sys.argv) == 2:
+                self.read_results(sys.argv[1])
+            elif len(sys.argv) == 3:
+                self.read_results(sys.argv[1])
+                self.read_challenges(sys.argv[2])
+            elif len(sys.argv) == 4:
+                self.read_results(sys.argv[1])
+                self.read_challenges(sys.argv[2])
+                self.read_students(sys.argv[3])
+            else:
+                sys.exit('Invalid number of files')
+        except ValueError as e:
+            sys.exit(e)
+        except FileNotFoundError as e:
+            sys.exit(e)
 
     def read_challenges(self, file):
         """
@@ -164,6 +169,7 @@ class Competition():
         result_table = self.result # Get the latest result
         most_difficult_challenge, most_difficult_average_time= result_table.return_hardest_challenge() # Get the most difficult challenge
         inversed_result_table = result_table.transpose() # Invert the result table so that we can get the number of finished and ongoing challenges
+        rows = [] # Define row variable for the table
         for challenge in self.challenge_manager.challenges:
             for row in inversed_result_table[1:]:
                 if row[0] == challenge.id:
@@ -174,10 +180,15 @@ class Competition():
                         average_time = round((sum(valid_result) / nfinish),2) # Calculate the average time and round to 2 decimal places
                     else:
                         average_time = None
-                    table.append([challenge.id, str(challenge), challenge.type, f'{challenge.weight:.1f}', nfinish, nongoing, average_time])
+                    rows.append([challenge.id, str(challenge), challenge.type, f'{challenge.weight:.1f}', nfinish, nongoing, average_time])
                     if not most_difficult_average_time or average_time > most_difficult_average_time:
                         most_difficult_challenge = challenge.id
                         most_difficult_average_time = average_time
+        #sort the table using the key lambda function to sort by the average time from low to high [2]
+        rows = sorted(rows, key=lambda x: x[6])
+        # Add the sorted row to the table
+        for row in rows:
+            table.append(row)
         table = Table.create_format_table("CHALLENGE INFORMATION", table, table_width, width_space=8, header_width_space=5, header_align='^', row_align='^')
         footer = f'The most difficult challenge is {most_difficult_challenge} with an average time of {average_time} minutes'
         table += '\n' + footer
@@ -185,43 +196,72 @@ class Competition():
             print(table)
         if return_table:
             return table
+    def return_student_participation_with_type(self, student_id: str) -> dict:
+        """This function take a student id and return a dictionary with the challenge_id as the key and a tuple that contain challenge type and the student particiation status.
+
+        Input:
+        - student_id (str): The ID of the student to find.
+
+        Returns:
+        - Dict {challenge_id: (challenge_type, participation_status)}
+        """
+        participation_dict = self.result.return_student_participation(student_id) # Get the student participation dictionary
+        for challenge_id in participation_dict:
+            challenge_type = self.challenge_manager.get_challenge(challenge_id).type
+            participation_dict[challenge_id] = (challenge_type, participation_dict[challenge_id]) # Update the dictionary with the challenge type
+        return participation_dict
+
     def report_student(self, return_table = False, print_terminal = True) -> str:
         """
         Print the report table of the student result to the console.
 
         Table:
 
-        +----------------+-----------+----------+----------+----------+-------------+
-        |    Student     |   Name    |  Type    | Nfinish  | Nongoing | AverageTime |
-        +----------------+-----------+----------+----------+----------+-------------+
-        | Student ID 1   |   Name 1  |    U     |    #     |     #    |    #.##     |
-        | Student ID 2   |   Name 2  |    P     |    #     |     #    |    #.##     |
-        +----------------+-----------+----------+----------+----------+-------------+
+        +----------------+-----------+----------+----------+----------+-------------+----------+-------------+
+        |    Student     |   Name    |  Type    | Nfinish  | Nongoing | AverageTime |  Score   |   Wscore    |
+        +----------------+-----------+----------+----------+----------+-------------+----------+-------------+
+        | Student ID 1   |   Name 1  |    U     |    #     |     #    |    #.##     |     #    |    #.##     |
+        | Student ID 2   |   Name 2  |    P     |    #     |     #    |    #.##     |     #    |    #.##     |
+        +----------------+-----------+----------+----------+----------+-------------+----------+-------------+
 
 
         Input:
         - return_table (bool): Return the table as a format string of the report if True
         - print_terminal (bool): Print the table to the console if True
         """
-        table =  [['Student', 'Name', 'Type', 'Nfinish', 'Nongoing', 'AverageTime']]
-        table_width = [10, 25, 10, 10, 10, 15]
+        table =  [['Student', 'Name', 'Type', 'Nfinish', 'Nongoing', 'AverageTime', 'Score', 'Wscore']]
+        table_width = [10, 25, 10, 10, 10, 15, 10 ,10]
         result_table = self.result
+        challenge_weights = self.challenge_manager.all_challenges_weight()
+        rows = [] # Define row variable for the table
         for student in self.student_manager.students:
+            student_name = student.name
             for row in result_table.result_array[1:]:
                 if row[0] == student.id:
                     valid_result = [float(x) for x in row[1:] if x not in ['--', '', None]]
                     nfinish = len(valid_result)
                     nongoing = len([x for x in row if x == '--'])
-                    if not student.meets_requirements():
-                        student_name = '!'+student.name
+                    score = result_table.return_student_score(student.id)
+                    wscore = round(result_table.return_student_score(student.id, challenge_weights),2)
+                    if not student.meets_requirements(self.return_student_participation_with_type(student.id)):
+                        student_name = '!'+student_name
                     if nfinish > 0:
                         average_time = round((sum(valid_result) / nfinish),2)
                     else:
                         average_time = None
-                    table.append([student.id, student_name, student.type, nfinish, nongoing, average_time])
+                    rows.append([student.id, student_name, student.type, nfinish, nongoing, average_time, score, wscore])
+        #sort the table using the key lambda function to sort by the weighted score from hight to low [2]
+        rows = sorted(rows, key=lambda x: x[7], reverse=True)
+        # Add the sorted row to the table
+        for row in rows:
+            table.append(row)
         table = Table.create_format_table("STUDENT INFORMATION", table, table_width, width_space=8, header_width_space=5, header_align='^', row_align='^')
-        student_detail = self.student_manager.get_student(result_table.fastest_student()[0])
-        footer = f'The student with the fatest average time is {student_detail} with an average time of {result_table.fastest_student()[1]:.2f} minutes.'
+        fastest_student_name = self.student_manager.get_student(result_table.fastest_student()[0])
+        highest_score_student_name = self.student_manager.get_student(result_table.highest_score_student()[0])
+        higest_wscore_student_name = self.student_manager.get_student(result_table.highest_score_student(challenge_weights)[0])
+        footer = f'The student with the fatest average time is {fastest_student_name} with an average time of {result_table.fastest_student()[1]:.2f} minutes.' \
+                f'\nThe student with the highest score is {highest_score_student_name} with a score of {result_table.highest_score_student()[1]}.' \
+                f'\nThe student with the highest weighted score is {higest_wscore_student_name} with a weighted score of {result_table.highest_score_student(challenge_weights)[1]:.1f}.'
         table += '\n' + footer
         if print_terminal:
             print(table)
@@ -245,15 +285,17 @@ class Competition():
         footer_message = f'Report {output_file} generated!'
         if len(sys.argv) == 2 : # Define output_file variable
             content += self.report_results(return_table, print_terminal)+'\n'
+            print(footer_message)
         elif len(sys.argv) == 3 :
             content += self.report_results(return_table, print_terminal)+'\n'
             content += self.report_challenges(return_table, print_terminal)+'\n'
+            print(footer_message)
         elif len(sys.argv) == 4:
             content += self.report_results(return_table, print_terminal)+'\n'
             content += self.report_challenges(return_table, print_terminal)+'\n'
             content += self.report_student(return_table, print_terminal)+'\n'
-            
-        content += f'{footer_message}\n'
+            print(footer_message)
+        content += f'{footer_message}\n' # Add the footer message to the content so terminal content and file content are the same
         TextEditor.add_to_file(output_file, content)
 
         

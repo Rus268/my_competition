@@ -16,6 +16,7 @@ class Challenge():
     def __init__(self, id:str, name:str):
         self.__id = id
         self.__name = name
+        self.__type = None
     
     def __str__(self):
         """ Returns a string representation of the challenge."""
@@ -81,7 +82,8 @@ class MandatoryChallenge(Challenge):
         return self.__type
     
     def __str__(self):
-        return f'{self.name}(M)'
+        """ Returns a string representation of the challenge."""
+        return f'{self.name}({self.type})'
     
     def __repr__(self):
         return f'{self.id}, {self.type}, {self.name}, {self.weight}'
@@ -109,7 +111,7 @@ class SpecialChallenge(Challenge):
     
     def __str__(self):
         """ Returns a string representation of the challenge."""
-        return f'{self.name}(M)'
+        return f'{self.name}({self.type})'
 
     def __repr__(self):
         return f'{self.id}, {self.type}, {self.name}, {self.weight}'
@@ -223,12 +225,21 @@ class ChallengeManager():
             raise ValueError(f"Missing challenge file {file_name}")
         with open(file_name, "r", encoding="utf-8") as file:
             for line in file:
+                if ',' not in line:
+                    raise ValueError("Challenge record must contain comma")
                 elements = [item.strip() for item in line.strip().split(",")]
                 if len(elements) == 4:
                     challenge_obj = ChallengeFactory.create_challenge(elements[0], elements[1], elements[2], elements[3])
                     self.__challenges.append(challenge_obj)
                 else:
-                    raise ValueError("Invalid challenge record")
+                    raise ValueError("Unexpected number of elements in challenge record or record is not separated by comma")
+    
+    def all_challenges_weight(self):
+        """ Returns the total weight of all challenges as a dictionary with challenge ID as key and weight as value."""
+        challenge_weight = {}
+        for ch in self.__challenges:
+            challenge_weight[ch.id] = ch.weight
+        return challenge_weight
 
 
 if __name__ == "__main__":
